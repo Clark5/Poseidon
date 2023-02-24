@@ -1,5 +1,5 @@
 # Poseidon Algorithm
-An official implementation of paper "Poseidon: Efficient, Robust, and Practical Datacenter CC via Deployable INT" of NSDI 2023.
+A NS-3 implementation of paper "Poseidon: Efficient, Robust, and Practical Datacenter CC via Deployable INT" of NSDI 2023.
 
 ## Installation
 
