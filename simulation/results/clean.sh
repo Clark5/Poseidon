@@ -1,0 +1,10 @@
+rm ./data/*
+rm ./mpd/*
+rm ./rate/*
+rm ./signal/*
+rm ./smoothed_signal/*
+rm ../mix/pfc_*
+rm ../mix/config_p*
+rm ../mix/fct_*
+rm ../mix/mix_*
+rm ../mix/qlen_*

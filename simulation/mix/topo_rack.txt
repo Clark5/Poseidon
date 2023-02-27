@@ -1,0 +1,27 @@
+17 1 16
+16
+0 16 100Gbps 1000ns 0.000000
+1 16 100Gbps 1000ns 0.000000
+2 16 100Gbps 1000ns 0.000000
+3 16 100Gbps 1000ns 0.000000
+4 16 100Gbps 1000ns 0.000000
+5 16 100Gbps 1000ns 0.000000
+6 16 100Gbps 1000ns 0.000000
+7 16 100Gbps 1000ns 0.000000
+8 16 100Gbps 1000ns 0.000000
+9 16 100Gbps 1000ns 0.000000
+10 16 100Gbps 1000ns 0.000000
+11 16 100Gbps 1000ns 0.000000
+12 16 100Gbps 1000ns 0.000000
+13 16 100Gbps 1000ns 0.000000
+14 16 100Gbps 1000ns 0.000000
+15 16 100Gbps 1000ns 0.000000
+
+
+
+
+First line: total node #, switch node #, link #
+Second line: switch node IDs...
+src0 dst0 rate delay error_rate
+src1 dst1 rate delay error_rate
+...

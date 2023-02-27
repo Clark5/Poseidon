@@ -1,3 +1,11 @@
+simulation/build/
+simulation/.waf*
+.lock-waf_linux2_build
+.vscode/
+
+# python related
+*.pyc
+
 # Prerequisites
 *.d
 
