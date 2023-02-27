@@ -13,7 +13,15 @@ Poseidon paper also constructes a testbed with Tofino2 switches. For implementat
 ## Citing Poseidon
 If you compare with Poseidon or use the Poseidon algorithm in a scientific publication, please cite the following paper:
 
-Wang, Weitao, et al. "Poseidon: Efficient, Robust, and Practical Datacenter CC via Deployable INT", NSDI, 2023.
+```
+@article{wang2023poseidon,
+  title={Poseidon: Efficient, Robust, and Practical Datacenter CC via Deployable INT},
+  author={Wang, Weitao and Moshref, Masoud and Li, Yuliang and Kumar, Gautam and Ng, TS Eugene and Cardwell, Neal and Dukkipati, Nandita},
+  booktitle={20th USENIX Symposium on Networked Systems Design and Implementation (NSDI 23)},
+  year={2023},
+  organization={USENIX Association}
+}
+```
 
 ## Contribution
 Community contributions are more than welcome, whether it be to fix bugs or to add new features. Feel free to open GitHub issues about your contribution ideas, and I will review them.
