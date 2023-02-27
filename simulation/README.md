@@ -30,6 +30,12 @@ Example usage:
 ### Plot results
 The `draw.py` will plot the essential results for Poseidon, including the evolving of rate, queue length, and mpd signal along with time. 
 
+### Exmaples
+```
+sh batch.sh
+python ./results/draw.py
+```
+
 ## Files added/edited based on NS3
 The major ones are listed here. There could be some files not listed here that are not important or not related to core logic.
 
