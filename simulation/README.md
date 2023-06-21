@@ -7,7 +7,7 @@ It is based on NS-3 version 3.17.
 
 ### Build
 ```
-cd simulator
+cd simulation
 ./waf configure
 ```
 
