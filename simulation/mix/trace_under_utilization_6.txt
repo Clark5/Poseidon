@@ -1,0 +1,18 @@
+7
+0 32 3 100 1000000000 2
+1 33 3 100 1000000000 2
+2 34 3 100 1000000000 2
+3 35 3 100 1000000000 2
+4 36 3 100 1000000000 2
+5 37 3 100 1000000000 2
+17 47 3 100 1000000000 2.01
+
+
+
+
+First line: # of flows
+src0 dst0 3 dst_port0 size0 start_time0
+src1 dst1 3 dst_port1 size1 start_time1
+...
+
+Please order the flows in ascending start_time!

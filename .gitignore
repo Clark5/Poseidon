@@ -1,4 +1,5 @@
 simulation/build/
+simulation/results/
 simulation/.waf*
 .lock-waf_linux2_build
 .vscode/

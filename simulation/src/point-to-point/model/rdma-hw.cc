@@ -15,11 +15,15 @@
 #include <deque>
 #include <cmath>
 #include <algorithm>
+#include <stdio.h>
+#include <time.h>
+#include <stdlib.h>
 
 namespace ns3{
 
 TypeId RdmaHw::GetTypeId (void)
-{
+{	
+	srand(time(NULL));
 	static TypeId tid = TypeId ("ns3::RdmaHw")
 		.SetParent<Object> ()
 		.AddAttribute("MinRate",
@@ -189,9 +193,14 @@ TypeId RdmaHw::GetTypeId (void)
 				MakeDoubleChecker<double>())
 		.AddAttribute("PoseidonMaxRate",
 				"The max rate for Poseidon",
-				DoubleValue(50.0 * 1000000000.0),
+				DoubleValue(100.0 * 1000000000.0),
 				MakeDoubleAccessor(&RdmaHw::m_poseidon_max_rate),
 				MakeDoubleChecker<double>())
+		.AddAttribute("EnableRoutopia",
+				"Enable Routopia",
+				UintegerValue(0),
+				MakeUintegerAccessor(&RdmaHw::m_enable_routopia),
+				MakeUintegerChecker<uint32_t>())
 		;
 	return tid;
 }
@@ -570,6 +579,14 @@ void RdmaHw::RedistributeQp(){
 }
 
 Ptr<Packet> RdmaHw::GetNxtPacket(Ptr<RdmaQueuePair> qp){
+	bool routopia_flag = false;
+	if (m_enable_routopia == 1) {
+		qp->poseidon.m_pkt_count += 1;
+		int mark = (qp->sip.Get() + qp->sport) * 4 % 300 + 200;
+		if (qp->poseidon.m_pkt_count % 3000 == mark) {
+			routopia_flag = true;
+		}
+	}
 	uint32_t payload_size = qp->GetBytesLeft();
 	if (m_mtu < payload_size)
 		payload_size = m_mtu;
@@ -578,6 +595,10 @@ Ptr<Packet> RdmaHw::GetNxtPacket(Ptr<RdmaQueuePair> qp){
 	SeqTsHeader seqTs;
 	seqTs.SetSeq (qp->snd_nxt);
 	seqTs.SetPG (qp->m_pg);
+	seqTs.ih.label = qp->poseidon.m_curr_label;
+	if (routopia_flag) {
+		seqTs.ih.label = rand() % 1000;
+	}
 	p->AddHeader (seqTs);
 	// add udp header
 	UdpHeader udpHeader;
@@ -765,8 +786,13 @@ void RdmaHw::HyperIncreaseMlx(Ptr<RdmaQueuePair> q){
 /***********************
  * Poseidon
  ***********************/
-#define PARA_P 525000
+#define PARA_P 525000 
 #define PARA_K 25000
+
+double CalculateRate(double delay, double min_rate, double max_rate) {
+	double rate = exp(log(max_rate) - (delay - PARA_K) * (log(max_rate) - log(min_rate)) / PARA_P);
+	return rate * 1e-9;
+}
 
 double CalculateTarget(DataRate rate, double min_rate, double max_rate) {
 	double target = PARA_P * (log(max_rate) - log(rate.GetBitRate())) / (log(max_rate) - log(min_rate)) + PARA_K;
@@ -787,7 +813,106 @@ void RdmaHw::HandleAckPoseidon(Ptr<RdmaQueuePair> qp, Ptr<Packet> p, CustomHeade
 	uint64_t rtt = Simulator::Now().GetTimeStep() - ch.ack.ih.pts;
 	qp->m_rtt = rtt;
 	bool read = (rand() % 250 == 99);
-	if (qp->poseidon.m_lastUpdateSeq == 0) { // first RTT
+	if (ch.ack.ih.label != qp->poseidon.m_curr_label && ch.ack.ih.label != qp->poseidon.m_prev_label) {
+		auto ih = ch.ack.ih;
+		double maxQD = 0;
+		double minUB = 1000;
+		int start = 0;
+		// if (qp->sip.Get() == 0x0b000001 || 
+		// 	qp->sip.Get() == 0x0b000101 || 
+		// 	qp->sip.Get() == 0x0b000201 || 
+		// 	qp->sip.Get() == 0x0b000301 || 
+		// 	qp->sip.Get() == 0x0b000401 || 
+		// 	qp->sip.Get() == 0x0b000501) {
+		// 	start = 1;
+		// }
+		for (uint32_t i = start; i < ih.nhop; ++i) {
+			// get maxQD
+			double delay = ih.hop[i].GetQlen();
+			if (delay > maxQD) {
+				maxQD = delay;
+			}
+			// get minUB
+			// uint64_t tau = ih.hop[i].GetTimeDelta(qp->poseidon.hop[i]);
+			// double duration = tau * 1e-9;
+			// double txRate = (ih.hop[i].GetBytesDelta(qp->poseidon.hop[i]) + ih.hop[i].GetQlen() - qp->poseidon.hop[i].GetQlen()) * 8 / duration;
+			// auto utilization = txRate / ih.hop[i].GetLineRate();
+			// 			// + (double)std::min(ih.hop[i].GetQlen(), qp->poseidon.hop[i].GetQlen()) 
+			// 			// * qp->m_max_rate.GetBitRate() / ih.hop[i].GetLineRate() / qp->m_win;
+			// signal = utilization;
+			double util  = ih.hop[i].GetUtil() * 2.0 / 100000.0 * 4 / 20.4 / 1;
+			double unused = (1 - util) * 100;
+			if (unused < minUB) {
+				minUB = unused;
+			}
+		}
+		pathProfile tmp = {maxQD, minUB};
+		m_prober[ch.ack.ih.label] = tmp;
+
+		if (m_prober.size() == 1) {
+			printf("Curr path: %08x % 08x fsr: %.3f ub: %.3f rate: %.3f\n", qp->sip, qp->dip, qp->poseidon.m_fsr, qp->poseidon.m_ub, qp->m_rate.GetBitRate()*1e-9);
+			if (qp->poseidon.m_ub > 6) {
+				m_prober.clear();
+				return;
+			}
+			double mmub = 1000;
+			double max_prob = 0;
+			uint32_t new_ub_label = qp->poseidon.m_curr_label;
+			uint32_t new_fsr_label = qp->poseidon.m_curr_label;
+			double curr_rate = qp->m_rate.GetBitRate() * 1e-9;
+			for (auto i : m_prober) {
+				double ub = i.second.minub;
+				if (ub < mmub) {
+					mmub = ub;
+					new_ub_label = i.first;
+				}
+				double fsr = CalculateRate(i.second.maxqd, m_poseidon_min_rate, m_poseidon_max_rate);
+				if (fsr > 110) {
+					fsr = ub;
+				}
+				printf("Altr path: %08x % 08x fsr: %.3f ub: %.3f label: %u \n", qp->sip, qp->dip, fsr, ub, i.first);
+				double lbound = (fsr + ub) / 2;
+				double ubound = fsr * 100 / (100 - ub + fsr);
+				// if (lbound >= curr_rate) {
+				// 	max_prob = 1;
+				// 	new_fsr_label = i.first;
+				// 	continue;
+				// }
+				// if (lbound >= ubound) {
+				// 	continue;
+				// }
+				double prob = 0;
+				if (curr_rate <= lbound) {
+					prob = 1;
+				} else if (curr_rate >= ubound) {
+					prob = 0;
+				} else {
+					prob = pow((ubound-curr_rate) / (ubound - lbound), 4);
+				}
+				if ((qp->poseidon.m_demand < qp->poseidon.m_fsr)) {
+					prob = 0;
+				}
+				if (prob > max_prob) {
+					max_prob = prob;
+					new_fsr_label = i.first;
+				}
+			}
+			if (curr_rate < mmub) {
+				qp->poseidon.m_prev_label = qp->poseidon.m_curr_label;
+				qp->poseidon.m_curr_label = new_ub_label;
+				printf("Reroute UB: %lu %08x %.3f %u\n", Simulator::Now().GetTimeStep(), qp->sip.Get(), mmub, qp->poseidon.m_curr_label);
+			} else if (max_prob > 0) {
+				double random_number = (rand() % 1000) / 1000.0;
+				if (random_number < max_prob) {
+					qp->poseidon.m_prev_label = qp->poseidon.m_curr_label;
+					qp->poseidon.m_curr_label = new_fsr_label;
+					printf("Reroute FSR: %lu %08x %.3f %u\n", Simulator::Now().GetTimeStep(), qp->sip.Get(), max_prob, qp->poseidon.m_curr_label);
+				}
+			}
+			m_prober.clear();
+		}
+		return;
+	} else if (qp->poseidon.m_lastUpdateSeq == 0) { // first RTT
 		qp->poseidon.m_lastUpdateSeq = next_seq;
 		qp->poseidon.m_lastUpdateTime = 0;
 		// store INT
@@ -801,6 +926,37 @@ void RdmaHw::HandleAckPoseidon(Ptr<RdmaQueuePair> qp, Ptr<Packet> p, CustomHeade
 
 		double mpt = CalculateTarget(qp->poseidon.m_curRate, m_poseidon_min_rate, m_poseidon_max_rate);
 		double queue_length_total = 0.0;
+
+		if (m_enable_routopia == 1) {
+			double maxQD = 0;
+			double minUB = 1000;
+			int start = 0;
+			for (uint32_t i = start; i < ih.nhop; ++i) {
+				// get maxQD
+				double delay = ih.hop[i].GetQlen();
+				if (delay > maxQD) {
+					maxQD = delay;
+				}
+				// get minUB
+				double util  = ih.hop[i].GetUtil() * 2.0 / 100000.0 * 4 / 20.4 / 1;
+				double unused = (1 - util) * 100;
+				if (unused < minUB) {
+					minUB = unused;
+				}
+			}
+			double fsr = CalculateRate(maxQD, m_poseidon_min_rate, m_poseidon_max_rate);
+			double curr_rate = qp->m_rate.GetBitRate() * 1e-9;
+			if (minUB > 10) {
+				qp->poseidon.m_demand = curr_rate;
+			} else if (curr_rate < fsr * 0.9) {
+				qp->poseidon.m_demand = curr_rate;
+			} else {
+				qp->poseidon.m_demand = 2000;
+			}
+			// keep track of the current link information
+			qp->poseidon.m_ub = minUB;
+			qp->poseidon.m_fsr = fsr;
+		}
 
 		if (ih.nhop <= IntHeader::maxHop){
 			double cwnd = 8376.0 * 1e-9 / qp->poseidon.m_curRate.CalculateTxTime(qp->lastPktSize);
@@ -855,6 +1011,23 @@ void RdmaHw::HandleAckPoseidon(Ptr<RdmaQueuePair> qp, Ptr<Packet> p, CustomHeade
 
 				qp->poseidon.hop[i] = ih.hop[i];
 			}
+			// if (qp->sip.Get() == 0x0b000001 || 
+			// 	qp->sip.Get() == 0x0b000101 || 
+			// 	qp->sip.Get() == 0x0b000201 || 
+			// 	qp->sip.Get() == 0x0b000301 || 
+			// 	qp->sip.Get() == 0x0b000401 || 
+			// 	qp->sip.Get() == 0x0b000501 || 
+			// 	qp->sip.Get() == 0x0b000601 || 
+			// 	qp->sip.Get() == 0x0b000701 || 
+			// 	qp->sip.Get() == 0x0b000801 || 
+			// 	qp->sip.Get() == 0x0b000901 || 
+			// 	qp->sip.Get() == 0x0b000a01 || 
+			// 	qp->sip.Get() == 0x0b000b01) {
+			// 	double bound = CalculateTarget(DataRate("30Gb/s"), m_poseidon_min_rate, m_poseidon_max_rate);
+			// 	if (mpd < bound) {
+			// 		mpd = bound;
+			// 	}
+			// }
 
 			if (read) {
 				printf("Queue: %lu %08x %.10lf\n", Simulator::Now().GetTimeStep(), qp->sip.Get(), queue_length_total);
@@ -908,7 +1081,7 @@ void RdmaHw::HandleAckPoseidon(Ptr<RdmaQueuePair> qp, Ptr<Packet> p, CustomHeade
 			qp->poseidon.m_curRate = new_rate;
 
 			if (read) {
-				printf("Rate: %lu %08x %.10lf\n", Simulator::Now().GetTimeStep(), qp->sip.Get(), new_rate.GetBitRate()*1e-9);
+				printf("Rate: %lu %08x %08x %.10lf\n", Simulator::Now().GetTimeStep(), qp->sip.Get(), qp->dip.Get(), new_rate.GetBitRate()*1e-9);
 			}
 		}
 		if (next_seq > qp->poseidon.m_lastUpdateSeq)
