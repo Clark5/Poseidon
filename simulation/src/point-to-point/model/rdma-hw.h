@@ -136,16 +136,6 @@ public:
 	double m_poseidon_max_rate;
 	void HandleAckPoseidon(Ptr<RdmaQueuePair> qp, Ptr<Packet> p, CustomHeader &ch);
 
-	/***********************
-	 * Routopia
-	 ***********************/
-	bool m_enable_routopia;
-	struct pathProfile{
-		double maxqd;
-		double minub;
-	};
-	std::map<uint16_t, pathProfile> m_prober;
-
 	/**********************
 	 * TIMELY
 	 *********************/

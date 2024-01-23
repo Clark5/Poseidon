@@ -41,7 +41,6 @@ namespace ns3 {
 		Ptr<Packet> DequeueRR(bool paused[]);
 		uint32_t GetNBytes(uint32_t qIndex) const;
 		uint32_t GetNBytesTotal() const;
-		uint64_t GetUtil() const;
 		uint32_t GetLastQueue();
 
 		TracedCallback<Ptr<const Packet>, uint32_t> m_traceBeqEnqueue;
@@ -57,10 +56,6 @@ namespace ns3 {
 		double m_maxBytes; //total bytes limit
 		uint32_t m_bytesInQueue[fCnt];
 		uint32_t m_bytesInQueueTotal;
-		std::deque<int64_t> recent_pkts_timestamps;
-		std::deque<int64_t> recent_pkts_bytes;
-		std::deque<int64_t> queue_depth;
-		int64_t m_recent_4us_bytes;
 		uint32_t m_rrlast;
 		uint32_t m_qlast;
 		std::vector<Ptr<Queue> > m_queues; // uc queues

@@ -19,9 +19,8 @@ public:
 					 time: timeWidth,
 					 bytes: bytesWidth,
 					 qlen: qlenWidth;
-			uint64_t bytes_per_4us;
 		};
-		uint32_t buf[4];
+		uint32_t buf[2];
 	};
 
 	static const uint32_t byteUnit = 128;
@@ -40,10 +39,7 @@ public:
 	uint64_t GetTime(){
 		return time;
 	}
-	uint64_t GetUtil() {
-		return bytes_per_4us;
-	}
-	void Set(uint64_t _time, uint64_t _bytes, uint32_t _qlen, uint64_t _rate, uint64_t util){
+	void Set(uint64_t _time, uint64_t _bytes, uint32_t _qlen, uint64_t _rate){
 		time = _time;
 		bytes = _bytes / (byteUnit * multi);
 		qlen = _qlen / (qlenUnit * multi);
@@ -62,7 +58,6 @@ public:
 				printf("Error: IntHeader unknown rate: %lu\n", _rate);
 				break;
 		}
-		bytes_per_4us = util;
 	}
 	uint64_t GetBytesDelta(IntHop &b){
 		if (bytes >= b.bytes)
@@ -96,7 +91,6 @@ public:
 			IntHop hop[maxHop];
 			uint64_t pts;
 			uint16_t nhop;
-			uint16_t label;
 		};
 		uint64_t ts;
 		union {
@@ -109,7 +103,7 @@ public:
 
 	IntHeader();
 	static uint32_t GetStaticSize();
-	void PushHop(uint64_t time, uint64_t bytes, uint32_t qlen, uint64_t rate, uint64_t util);
+	void PushHop(uint64_t time, uint64_t bytes, uint32_t qlen, uint64_t rate);
 	void Serialize (Buffer::Iterator start) const;
 	uint32_t Deserialize (Buffer::Iterator start);
 	uint64_t GetTs(void);

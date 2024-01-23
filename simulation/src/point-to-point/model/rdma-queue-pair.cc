@@ -71,13 +71,6 @@ RdmaQueuePair::RdmaQueuePair(uint16_t pg, Ipv4Address _sip, Ipv4Address _dip, ui
 
 	poseidon.m_lastUpdateSeq = 0;
 	poseidon.m_lastUpdateTime = 0;
-	poseidon.m_pkt_count = 0;
-	poseidon.m_label = 0;
-	poseidon.m_curr_label = 0;
-	poseidon.m_prev_label = 0;
-	poseidon.m_demand = 2000;
-	poseidon.m_ub = 0;
-	poseidon.m_fsr = 0;
 	for (uint32_t i = 0; i < IntHeader::maxHop; i++){
 		poseidon.signals[i] = 0;
 	}

@@ -3,7 +3,6 @@ import sys
 import os
 
 config_template="""ENABLE_QCN 1
-FLOW_LEVEL_ECMP 1
 USE_DYNAMIC_PFC_THRESHOLD 1
 
 PACKET_PAYLOAD_SIZE 1000
@@ -11,11 +10,11 @@ PACKET_PAYLOAD_SIZE 1000
 TOPOLOGY_FILE mix/{topo}.txt
 FLOW_FILE mix/{trace}.txt
 TRACE_FILE mix/trace.txt
-TRACE_OUTPUT_FILE mix/mix_{topo}_{trace}_{cc}{enable_routopia}.tr
-FCT_OUTPUT_FILE mix/fct_{topo}_{trace}_{cc}{enable_routopia}.txt
-PFC_OUTPUT_FILE mix/pfc_{topo}_{trace}_{cc}{enable_routopia}.txt
+TRACE_OUTPUT_FILE mix/mix_{topo}_{trace}_{cc}{failure}.tr
+FCT_OUTPUT_FILE mix/fct_{topo}_{trace}_{cc}{failure}.txt
+PFC_OUTPUT_FILE mix/pfc_{topo}_{trace}_{cc}{failure}.txt
 
-SIMULATOR_STOP_TIME 2.02
+SIMULATOR_STOP_TIME 2.05
 
 CC_MODE {mode}
 ALPHA_RESUME_INTERVAL {t_alpha}
@@ -65,13 +64,12 @@ QLEN_MON_END 3000000000
 POSEIDON_M {poseidon_m}
 POSEIDON_MIN_RATE {poseidon_min_rate}
 POSEIDON_MAX_RATE {poseidon_max_rate}
-ENABLE_ROUTOPIA {enable_routopia}
 """
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='run simulation')
 	parser.add_argument('--cc', dest='cc', action='store', default='poseidon', help="poseidon/hp/dcqcn/timely/dctcp/hpccPint")
 	parser.add_argument('--trace', dest='trace', action='store', default='flow', help="the name of the flow file")
-	parser.add_argument('--bw', dest="bw", action='store', default='100', help="the NIC bandwidth")
+	parser.add_argument('--bw', dest="bw", action='store', default='50', help="the NIC bandwidth")
 	parser.add_argument('--down', dest='down', action='store', default='0 0 0', help="link down event")
 	parser.add_argument('--topo', dest='topo', action='store', default='fat', help="the name of the topology file")
 	parser.add_argument('--utgt', dest='utgt', action='store', type=int, default=95, help="eta of HPCC")
@@ -82,7 +80,6 @@ if __name__ == "__main__":
 	parser.add_argument('--enable_tr', dest='enable_tr', action = 'store', type=int, default=0, help="enable packet-level events dump")
 	parser.add_argument('--poseidon_m', dest='poseidon_m', action = 'store', type=float, default=0.01, help="Poseidon's parameter m")
 	parser.add_argument('--poseidon_min_rate', dest='poseidon_min_rate', action = 'store', type=float, default=0.1, help="Poseidon's min rate")
-	parser.add_argument('--enable_routopia', dest='enable_routopia', action = 'store', type=int, default=0, help="enable routopia")
 	args = parser.parse_args()
 
 	topo=args.topo
@@ -98,13 +95,12 @@ if __name__ == "__main__":
 	poseidon_m = args.poseidon_m
 	poseidon_min_rate = args.poseidon_min_rate  * 1000000000.0
 	poseidon_max_rate = float(bw) * 1000000000.0
-	enable_routopia = args.enable_routopia
 
 	failure = ''
 	if args.down != '0 0 0':
 		failure = '_down'
 
-	config_name = "mix/config_%s_%s_%s%s.txt"%(topo, trace, args.cc, enable_routopia)
+	config_name = "mix/config_%s_%s_%s%s.txt"%(topo, trace, args.cc, failure)
 
 	kmax_map = "2 %d %d %d %d"%(bw*1000000000, 400*bw/25, bw*4*1000000000, 400*bw*4/25)
 	kmin_map = "2 %d %d %d %d"%(bw*1000000000, 100*bw/25, bw*4*1000000000, 100*bw*4/25)
@@ -114,13 +110,13 @@ if __name__ == "__main__":
 		hai = 50 * bw /25
 
 		if args.cc == "dcqcn":
-			config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=1, t_alpha=1, t_dec=4, t_inc=300, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=0, vwin=0, us=0, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=1, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate, enable_routopia=enable_routopia)
+			config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=1, t_alpha=1, t_dec=4, t_inc=300, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=0, vwin=0, us=0, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=1, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate)
 		elif args.cc == "dcqcn_paper":
-			config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=1, t_alpha=50, t_dec=50, t_inc=55, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=0, vwin=0, us=0, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=1, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate, enable_routopia=enable_routopia)
+			config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=1, t_alpha=50, t_dec=50, t_inc=55, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=0, vwin=0, us=0, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=1, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate)
 		elif args.cc == "dcqcn_vwin":
-			config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=1, t_alpha=1, t_dec=4, t_inc=300, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=1, vwin=1, us=0, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=0, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate, enable_routopia=enable_routopia)
+			config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=1, t_alpha=1, t_dec=4, t_inc=300, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=1, vwin=1, us=0, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=0, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate)
 		elif args.cc == "dcqcn_paper_vwin":
-			config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=1, t_alpha=50, t_dec=50, t_inc=55, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=1, vwin=1, us=0, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=0, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate, enable_routopia=enable_routopia)
+			config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=1, t_alpha=50, t_dec=50, t_inc=55, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=1, vwin=1, us=0, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=0, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate)
 	elif args.cc == "hp":
 		ai = 10 * bw / 25;
 		if args.hpai > 0:
@@ -132,10 +128,10 @@ if __name__ == "__main__":
 			cc += "mi%d"%mi
 		if args.hpai > 0:
 			cc += "ai%d"%ai
-		config_name = "mix/config_%s_%s_%s%s.txt"%(topo, trace, cc, enable_routopia)
-		config = config_template.format(bw=bw, trace=trace, topo=topo, cc=cc, mode=3, t_alpha=1, t_dec=4, t_inc=300, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=1, vwin=1, us=1, u_tgt=u_tgt, mi=mi, int_multi=int_multi, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=0, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate, enable_routopia=enable_routopia)
+		config_name = "mix/config_%s_%s_%s%s.txt"%(topo, trace, cc, failure)
+		config = config_template.format(bw=bw, trace=trace, topo=topo, cc=cc, mode=3, t_alpha=1, t_dec=4, t_inc=300, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=1, vwin=1, us=1, u_tgt=u_tgt, mi=mi, int_multi=int_multi, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=0, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate)
 	elif args.cc == "poseidon":
-		config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=11, t_alpha=1, t_dec=4, t_inc=300, g=0.00390625, ai=1, hai=1, dctcp_ai=1000, has_win=1, vwin=1, us=1, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=0, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate, enable_routopia=enable_routopia)
+		config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=11, t_alpha=1, t_dec=4, t_inc=300, g=0.00390625, ai=1, hai=1, dctcp_ai=1000, has_win=1, vwin=1, us=1, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=0, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate)
 	elif args.cc == "dctcp":
 		ai = 10 # ai is useless for dctcp
 		hai = ai  # also useless
@@ -143,15 +139,15 @@ if __name__ == "__main__":
 		kmax_map = "2 %d %d %d %d"%(bw*1000000000, 30*bw/10, bw*4*1000000000, 30*bw*4/10)
 		kmin_map = "2 %d %d %d %d"%(bw*1000000000, 30*bw/10, bw*4*1000000000, 30*bw*4/10)
 		pmax_map = "2 %d %.2f %d %.2f"%(bw*1000000000, 1.0, bw*4*1000000000, 1.0)
-		config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=8, t_alpha=1, t_dec=4, t_inc=300, g=0.0625, ai=ai, hai=hai, dctcp_ai=dctcp_ai, has_win=1, vwin=1, us=0, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=0, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate, enable_routopia=enable_routopia)
+		config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=8, t_alpha=1, t_dec=4, t_inc=300, g=0.0625, ai=ai, hai=hai, dctcp_ai=dctcp_ai, has_win=1, vwin=1, us=0, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=0, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate)
 	elif args.cc == "timely":
 		ai = 10 * bw / 10;
 		hai = 50 * bw / 10;
-		config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=7, t_alpha=1, t_dec=4, t_inc=300, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=0, vwin=0, us=0, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=1, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate, enable_routopia=enable_routopia)
+		config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=7, t_alpha=1, t_dec=4, t_inc=300, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=0, vwin=0, us=0, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=1, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate)
 	elif args.cc == "timely_vwin":
 		ai = 10 * bw / 10;
 		hai = 50 * bw / 10;
-		config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=7, t_alpha=1, t_dec=4, t_inc=300, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=1, vwin=1, us=0, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=1, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate, enable_routopia=enable_routopia)
+		config = config_template.format(bw=bw, trace=trace, topo=topo, cc=args.cc, mode=7, t_alpha=1, t_dec=4, t_inc=300, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=1, vwin=1, us=0, u_tgt=u_tgt, mi=mi, int_multi=1, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=1, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate)
 	elif args.cc == "hpccPint":
 		ai = 10 * bw / 25;
 		if args.hpai > 0:
@@ -165,8 +161,8 @@ if __name__ == "__main__":
 			cc += "ai%d"%ai
 		cc += "log%.3f"%pint_log_base
 		cc += "p%.3f"%pint_prob
-		config_name = "mix/config_%s_%s_%s%s.txt"%(topo, trace, cc, enable_routopia)
-		config = config_template.format(bw=bw, trace=trace, topo=topo, cc=cc, mode=10, t_alpha=1, t_dec=4, t_inc=300, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=1, vwin=1, us=1, u_tgt=u_tgt, mi=mi, int_multi=int_multi, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=0, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate, enable_routopia=enable_routopia)
+		config_name = "mix/config_%s_%s_%s%s.txt"%(topo, trace, cc, failure)
+		config = config_template.format(bw=bw, trace=trace, topo=topo, cc=cc, mode=10, t_alpha=1, t_dec=4, t_inc=300, g=0.00390625, ai=ai, hai=hai, dctcp_ai=1000, has_win=1, vwin=1, us=1, u_tgt=u_tgt, mi=mi, int_multi=int_multi, pint_log_base=pint_log_base, pint_prob=pint_prob, ack_prio=0, link_down=args.down, failure=failure, kmax_map=kmax_map, kmin_map=kmin_map, pmax_map=pmax_map, buffer_size=bfsz, enable_tr=enable_tr, poseidon_m=poseidon_m, poseidon_min_rate=poseidon_min_rate, poseidon_max_rate=poseidon_max_rate)
 	else:
 		print("unknown cc:", args.cc)
 		sys.exit(1)

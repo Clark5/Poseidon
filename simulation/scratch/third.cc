@@ -88,7 +88,6 @@ unordered_map<uint64_t, double> rate2pmax;
 double poseidon_para_m = 0.25;
 double poseidon_min_rate = 0.1 * 1000000000.0;
 double poseidon_max_rate = 100 * 1000000000.0;
-int enable_routopia = 0;
 
 /************************************************
  * Runtime varibles
@@ -668,10 +667,6 @@ int main(int argc, char *argv[])
 				conf >> poseidon_max_rate;
 				std::cout << "POSEIDON_MAX_RATE\t\t\t\t" << poseidon_max_rate << '\n';
 			}
-			else if (key.compare("ENABLE_ROUTOPIA") == 0){
-				conf >> enable_routopia;
-				std::cout << "ENABLE_ROUTOPIA\t\t\t\t" << enable_routopia << '\n';
-			}
 			fflush(stdout);
 		}
 		conf.close();
@@ -906,7 +901,6 @@ int main(int argc, char *argv[])
 			rdmaHw->SetAttribute("PoseidonParaM", DoubleValue(poseidon_para_m));
 			rdmaHw->SetAttribute("PoseidonMinRate", DoubleValue(poseidon_min_rate));
 			rdmaHw->SetAttribute("PoseidonMaxRate", DoubleValue(poseidon_max_rate));
-			rdmaHw->SetAttribute("EnableRoutopia", UintegerValue(enable_routopia));
 			rdmaHw->SetPintSmplThresh(pint_prob);
 			// create and install RdmaDriver
 			Ptr<RdmaDriver> rdma = CreateObject<RdmaDriver>();

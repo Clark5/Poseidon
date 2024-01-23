@@ -87,13 +87,6 @@ public:
 		DataRate m_curRate;
 		IntHop hop[IntHeader::maxHop];
 		double signals[IntHeader::maxHop];
-		int m_pkt_count;
-		uint16_t m_label;
-		uint16_t m_curr_label;
-		uint16_t m_prev_label;
-		double m_demand;
-		double m_ub;
-		double m_fsr;
 	} poseidon;
 
 	/***********

@@ -55,7 +55,6 @@ namespace ns3 {
 	{
 		NS_LOG_FUNCTION_NOARGS();
 		m_bytesInQueueTotal = 0;
-		m_recent_4us_bytes = 0;
 		m_rrlast = 0;
 		for (uint32_t i = 0; i < fCnt; i++)
 		{
@@ -126,21 +125,6 @@ namespace ns3 {
 			m_traceBeqDequeue(p, qIndex);
 			m_bytesInQueueTotal -= p->GetSize();
 			m_bytesInQueue[qIndex] -= p->GetSize();
-			// Update the recent utilization
-			recent_pkts_timestamps.push_back(Simulator::Now().GetNanoSeconds());
-			recent_pkts_bytes.push_back(p->GetSize());
-			queue_depth.push_back(m_bytesInQueueTotal);
-			m_recent_4us_bytes += p->GetSize();
-			while(!recent_pkts_bytes.empty()) {
-				if (recent_pkts_timestamps.front() + 20400 * 1 < Simulator::Now().GetNanoSeconds()) {
-					m_recent_4us_bytes -= recent_pkts_bytes.front();
-					recent_pkts_bytes.pop_front();
-					recent_pkts_timestamps.pop_front();
-					queue_depth.pop_front();
-				} else {
-					break;
-				}
-			}
 			if (qIndex != 0)
 			{
 				m_rrlast = qIndex;
@@ -249,12 +233,6 @@ namespace ns3 {
 		BEgressQueue::GetNBytesTotal() const
 	{
 		return m_bytesInQueueTotal;
-	}
-
-	uint64_t
-		BEgressQueue::GetUtil() const
-	{
-		return m_recent_4us_bytes;
 	}
 
 	uint32_t
