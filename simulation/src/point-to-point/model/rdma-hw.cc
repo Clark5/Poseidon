@@ -803,7 +803,7 @@ void RdmaHw::HandleAckPoseidon(Ptr<RdmaQueuePair> qp, Ptr<Packet> p, CustomHeade
 		double queue_length_total = 0.0;
 
 		if (ih.nhop <= IntHeader::maxHop){
-			double cwnd = 8376.0 * 1e-9 / qp->poseidon.m_curRate.CalculateTxTime(qp->lastPktSize);
+			double cwnd = 1.0 * rtt * 1e-9 / qp->poseidon.m_curRate.CalculateTxTime(qp->lastPktSize);
 
 			double mpd = 0;
 			double global_error_integral = 0.0;
